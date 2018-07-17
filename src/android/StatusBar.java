@@ -16,17 +16,17 @@
  * specific language governing permissions and limitations
  * under the License.
  *
-*/
+ */
 package org.apache.cordova.statusbar;
 
 import android.app.Activity;
+import android.content.res.Resources;
 import android.graphics.Color;
+import android.graphics.Rect;
 import android.os.Build;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
-import android.graphics.Rect;
-import android.content.res.Resources;
 
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.CordovaArgs;
@@ -36,6 +36,7 @@ import org.apache.cordova.CordovaWebView;
 import org.apache.cordova.LOG;
 import org.apache.cordova.PluginResult;
 import org.json.JSONException;
+
 import java.util.Arrays;
 
 public class StatusBar extends CordovaPlugin {
@@ -111,11 +112,13 @@ public class StatusBar extends CordovaPlugin {
                         uiOptions &= ~View.SYSTEM_UI_FLAG_FULLSCREEN;
 
                         window.getDecorView().setSystemUiVisibility(uiOptions);
+
+                        window.getDecorView().setOnSystemUiVisibilityChangeListener(null);
                     }
 
                     // CB-11197 We still need to update LayoutParams to force status bar
                     // to be hidden when entering e.g. text fields
-                    window.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+//                    window.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
                 }
             });
             return true;
@@ -133,11 +136,26 @@ public class StatusBar extends CordovaPlugin {
                                 | View.SYSTEM_UI_FLAG_FULLSCREEN;
 
                         window.getDecorView().setSystemUiVisibility(uiOptions);
-                    }
 
-                    // CB-11197 We still need to update LayoutParams to force status bar
-                    // to be hidden when entering e.g. text fields
-                    window.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+                        window.getDecorView().setOnSystemUiVisibilityChangeListener(i -> window.getDecorView().setSystemUiVisibility(uiOptions));
+
+                        View contentFrame = window.getDecorView().findViewById(android.R.id.content);
+
+                        contentFrame.setFitsSystemWindows(true);
+                        contentFrame.setOnApplyWindowInsetsListener((view, windowInsets) -> {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                                view.setPadding(windowInsets.getSystemWindowInsetLeft(), 0, windowInsets.getSystemWindowInsetRight(),
+                                    windowInsets.getSystemWindowInsetBottom());
+                                return windowInsets.replaceSystemWindowInsets(0, windowInsets.getSystemWindowInsetTop(), 0, 0);
+                            } else {
+                                return view.onApplyWindowInsets(windowInsets);
+                            }
+                        });
+
+                        // CB-11197 We still need to update LayoutParams to force status bar
+                        // to be hidden when entering e.g. text fields
+//                        window.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+                    }
                 }
             });
             return true;
